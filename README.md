@@ -4,3 +4,5 @@ To run:
 npm install 
 
 node server
+
+in browser: localhost3000
