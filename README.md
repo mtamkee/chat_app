@@ -1,4 +1,9 @@
-# seng_chat_app
+# chat_app
+Matthew Tamkee 30042238
+
+https://github.com/mtamkee/chat_app
+
+
 To run:
 
 npm install 
