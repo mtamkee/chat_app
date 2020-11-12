@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="english">
+    <head>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+        <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/js-cookie@beta/dist/js.cookie.min.js"></script>
+        <meta charset="UTF-8">
+        <Title>Socket IO Chat</Title>
+        <style>
+            
+            #chat
+                {
+                    height: 60vh;
+                    overflow-y: scroll;
+                    overflow-x: scroll;
+                    display: flex;
+                    flex-flow: column nowrap;   
+                    background-color: whitesmoke;       
+                }
+            #recent_message
+                {
+                    margin-top: auto !important;
+                }
+
+            body
+                {
+                    margin-top: 40px;
+                    background-color: lightslategray;
+                }
+
+        
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="row" id="message_area">
+                <!-- side bar to display the users online.-->
+                <div class="col-md-4">
+                    <div class="well">
+                        <h3>Users Online</h3>
+                        <ul class="list-group" id="users"></ul>
+                    </div>
+                </div>
+                <!-- main chat area -->
+                <div class="col-md-8">
+                    <div id="name_display"></div>
+                    <div class="chat" id="chat"> 
+                    </div>
+                    <!-- Where users will enter in messages-->
+                    <form id="message_form">
+                        <div class="form-group">
+                            <label><h3>Enter Message</h3></label>
+                            <!--When cliking message area, it defaults to farthest left point of textarea-->
+                            <textarea class="form-control" id="message" onclick="this.focus();this.select()"></textarea>
+                            <br/>
+                            <input type="submit" id="submitMessage" class="btn btn-primary" value="Send Message"/>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script>
+            $(function(){
+                let socket = io.connect();
+                let $message_form = $('#message_form');
+                let $message = $('#message');
+                let $chat = $('#chat');
+                let $message_area = $('#message_area');
+                let $users = $('#users');
+                let $name_display = $('#name_display');
+                let $username = $('#username');
+                let new_Name = "";
+                let old_Name = Cookies.get('cookie_username');
+
+                
+                //invokes name checker which determines if users are going to use their previous name or 
+                //if they are going to be assigned a new name from the random generator.
+                name_checker();
+
+                //set cookies to the new name
+                set_cookies(new_Name);
+                //set current user to the coookie name
+                let currentUser = Cookies.get('cookie_username');
+                message_sender(currentUser);
+                
+                
+            //show all messages for users.
+            socket.on('load messages', function(messages){
+                let message_length = messages.length;
+                console.log("this is the number of messages: ",message_length)
+                    for(counter = 0;counter<message_length;counter++){
+                        $chat.append(messages[counter]);
+                    }
+                });
+
+            //name change    
+            socket.on('change name', function(user_name){
+                //set the cookie username to their username
+                set_cookies(user_name);
+                //display who they are onscreen.
+                $name_display.html("<h2>Hello: " + user_name + "</h2>");
+                //set the current user to cookie_username
+                currentUser = Cookies.get('cookie_username');
+                //set cookie_username to the current user.
+                set_cookies(currentUser);
+            });
+            
+            //user can also press enter to submit a message and shift+enter to go new line.
+                $("#message").keypress(function (enter) {
+                    if(enter.which == 13 && !enter.shiftKey) {
+                        socket.emit('send message',n_clear());
+                        clear_message();
+                    }
+
+                });
+                //remove new lines from the message area
+                $message_form.submit(function(submission){
+                    submission.preventDefault();
+                    console.log('submit');    
+                    socket.emit('send message',n_clear());
+                    clear_message();
+                });
+                socket.on('new message',function(incoming_messages){
+                    $chat.append('<div class="well"><strong>'+incoming_messages.user+'</strong>: '+incoming_messages.msg+'</div>')
+                });
+
+                
+                socket.on('get users',function(incoming_messages){
+                    user_string = '';
+                    let num_users = incoming_messages.length;
+                    for(counter = 0; counter <num_users; counter++){
+                        user_string += '<li class="list-group-item">'+incoming_messages[counter]+'</li>';
+                    }
+                    $users.html(user_string);
+                });
+                
+                //when a message is sent, it clears the text area so a new message can be typed.
+                function clear_message(){
+                    $message.val('');
+                };
+                
+
+                 
+                 
+                //let old_Name = Cookies.get('cookie_username');
+                //name checker function determines if a name has been used in the past via cookies or needs a new name
+                function name_checker(){
+                    //check if the old name is not undefined.
+                if(old_Name != undefined){
+                    //since the user has a name, make their new name their old name.
+                    new_Name = old_Name;
+                    console.log("I have a name");
+                    socket.emit('new user', new_Name);
+                }
+                else{
+                    
+                    //get a random name from the random name function.
+                    let u_name = random_name();
+                    new_Name = u_name;
+                    console.log("I am nameless");
+                    //emit the new user name.
+                    socket.emit('new user', new_Name)
+                }
+                };
+                //generate a random name from a list.
+                function random_name(){
+                    const some_names = ['bunny','bear','lion', 'moose','elk','alligator','snake','goose','duck','salmon'];
+                    const a_name = Math.floor(Math.random() * some_names.length);
+                    var x = some_names[a_name];
+                    //generate a random number
+                    let nameCode = Math.floor(Math.random() * 5000);
+                    var unique_name = x+nameCode;
+                    console.log("this is the unique name: ",unique_name);
+                    return unique_name;
+                };
+                console.log("I am : ",random_name());
+
+                function n_clear(){
+                    var msg_content = $message.val().replace("\n","");   
+                    return msg_content
+                };
+
+                function message_sender(currentUser){
+                    socket.on('send message', function(messages, date_time, user_name, user_color){
+                        console.log("this is the color: ",user_color)
+                        console.log(currentUser);
+                        //function differentiates between current user on screen and a different user. 
+                        //if the currentUser === user_name, then messages will be shown in bold as bold denoted in the <b> tag
+                        if(currentUser === user_name){ 
+                            //pass message to front end.
+                            //username is put inside the span tags so that it changes the username color.
+                            $chat.append(
+                                '<div class="well" id="recent_message">(' + date_time + ') <span style = " color: ' + user_color + '">' + currentUser + ": </span><b>" + messages + '</b></div>');
+                            }
+                        //if current user != user_name, then the messages aren't shown in bold as they aren't sent from you.
+                        else{
+                            $chat.append(
+                                '<div class="well" id="recent_message">(' + date_time + ') <span style = " color: ' + user_color + '">' + user_name + ": </span>" + messages + '</div>');
+                        }
+                    });
+                };
+
+                function set_cookies(some_username){
+                Cookies.set('cookie_username',some_username);
+            };
+
+            });
+        </script>
+    </body>
+        
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "seng_chat_app",
+  "version": "1.0.0",
+  "description": "seng 513 chat app",
+  "main": "index.js",
+  "scripts": {
+    "test": "server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mtamkee/seng_chat_app.git"
+  },
+  "author": "Matthew Tamkee",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mtamkee/seng_chat_app/issues"
+  },
+  "homepage": "https://github.com/mtamkee/seng_chat_app#readme",
+  "devDependencies": {
+    "express": "*",
+    "require-stack": "*",
+    "socket.io": "*",
+    "cookie-parser": "*",
+    "cookies": "*"
+  },
+  "keywords": []
+}
